@@ -79,4 +79,25 @@ public class UserDao {
             return statement.executeUpdate() > 0;
         }
     }
+
+    public boolean updateUserRoleAndStatus(int userId, String newRole, String newStatus) throws SQLException {
+        String sql = "UPDATE users SET roles = ?, status = ? WHERE id = ?";
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            // Normalize input first, then store the role using the lowercase values
+            // required by the existing SQLite CHECK constraint.
+            String normalizedRole = newRole.trim().toUpperCase();
+            String databaseRole = switch (normalizedRole) {
+                case "OWNER/ADMIN" -> "admin/owner";
+                case "STAFF" -> "staff";
+                case "CUSTOMER" -> "customer";
+                default -> throw new IllegalArgumentException("Invalid role: " + newRole);
+            };
+            String databaseStatus = newStatus.trim().toUpperCase();
+            statement.setString(1, databaseRole);
+            statement.setString(2, databaseStatus);
+            statement.setInt(3, userId);
+            return statement.executeUpdate() > 0;
+        }
+    }
 }
